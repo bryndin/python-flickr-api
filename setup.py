@@ -1,7 +1,7 @@
 from setuptools import setup
 import re
 
-VERSION_FILE = "flickr_api/_version.py"
+VERSION_FILE = "tornado_flickr_api/_version.py"
 try:
     vers_content = open(VERSION_FILE, "r").read()
     version_str = re.search(r'__version__ = "(.+?)"', vers_content).group(1)
