@@ -3,7 +3,7 @@ import sys
 from tornado.ioloop import IOLoop
 from tornado.gen import coroutine
 
-import flickr_api
+import tornado_flickr_api
 
 
 @coroutine
@@ -12,11 +12,11 @@ def start():
         username = sys.argv[1]
         try:
             access_token = sys.argv[2]
-            flickr_api.set_auth_handler(access_token)
+            tornado_flickr_api.set_auth_handler(access_token)
         except IndexError:
             pass
 
-        u = yield flickr_api.Person.findByUserName(username)
+        u = yield tornado_flickr_api.Person.findByUserName(username)
         ps = yield u.getPhotosets()
 
         for i, p in enumerate(ps):

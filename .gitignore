@@ -1,5 +1,5 @@
 /build
-/flickr_api.egg-info
+/tornado_flickr_api.egg-info/
 .idea/
 *.pyc
 *.egg
