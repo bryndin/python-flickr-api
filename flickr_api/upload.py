@@ -14,16 +14,23 @@
 
 """
 
-
-from .flickrerrors import FlickrError, FlickrAPIError
-from .objects import Photo, UploadTicket
-from . import auth
-from . import multipart
 import os
-from xml.etree import ElementTree as ET
+from xml.etree import ElementTree
+
+from tornado.gen import coroutine, Return
+from tornado.ioloop import PeriodicCallback
+from tornado.concurrent import Future
+
+from flickrerrors import FlickrError, FlickrAPIError
+from objects import Photo
+import auth
+import multipart
+
 
 UPLOAD_URL = "https://api.flickr.com/services/upload/"
 REPLACE_URL = "https://api.flickr.com/services/replace/"
+
+_futures = {}
 
 
 def format_dict(d):
@@ -40,6 +47,7 @@ def format_dict(d):
     return d_
 
 
+@coroutine
 def post(url, auth_handler, args, photo_file):
     args = format_dict(args)
     args["api_key"] = auth_handler.key
@@ -50,17 +58,22 @@ def post(url, auth_handler, args, photo_file):
 
     files = [("photo", os.path.basename(photo_file), open(photo_file).read())]
 
-    r, data = multipart.posturl(url, fields, files)
-    if r.status != 200:
-        raise FlickrError("HTTP Error %i: %s" % (r.status, data))
+    try:
+        response = yield multipart.posturl(url, fields, files)
+    except Exception as e:
+        raise e
+
+    if response.code != 200:
+        raise FlickrError("HTTP Error %i: %s" % (response.code, response.body))
     
-    r = ET.fromstring(data)
+    r = ElementTree.fromstring(response.body)
     if r.get("stat") != 'ok':
         err = r[0]
         raise FlickrAPIError(int(err.get("code")), err.get("msg"))
-    return r
+    raise Return(r)
 
 
+@coroutine
 def upload(**args):
     """
     Authentication:
@@ -75,7 +88,7 @@ def upload(**args):
         description (optional)
             A description of the photo. May contain some limited HTML.
         tags (optional)
-            A space-seperated list of tags to apply to the photo.
+            A space-separated list of tags to apply to the photo.
         is_public, is_friend, is_family (optional)
             Set to 0 for no, 1 for yes. Specifies who can view the photo.
         safety_level (optional)
@@ -92,17 +105,33 @@ def upload(**args):
     if "async" not in args:
         args["async"] = False
 
-    photo_file = args.pop("photo_file")
-    r = post(UPLOAD_URL, auth.AUTH_HANDLER, args, photo_file)
+    if auth.AUTH_HANDLER is None:
+        raise FlickrError("Not authenticated")
 
-    t = r[0]
+    photo_file = args.pop("photo_file")
+    try:
+        resp_body = yield post(UPLOAD_URL, auth.AUTH_HANDLER, args, photo_file)
+    except Exception as e:
+        raise e
+
+    t = resp_body[0]
     if t.tag == 'photoid':
-        return Photo(
-            id=t.text,
-            editurl='https://www.flickr.com/photos/upload/edit/?ids=' + t.text
-        )
+        # sync mode, got a photo
+        raise Return(Photo(id=t.text,
+                           editurl='https://www.flickr.com/photos/upload/edit/?ids=' + t.text))
     elif t.tag == 'ticketid':
-        return UploadTicket(id=t.text)
+        # async mode, got a ticket
+        if not _futures:
+            _periodic_checks.start()
+
+        _futures[t.text] = Future()
+        try:
+            yield _futures[t.text]
+        except Exception as e:
+            raise e
+
+        raise Return(Photo(id=t.text,
+                           editurl='https://www.flickr.com/photos/upload/edit/?ids=' + t.text))
     else:
         raise FlickrError("Unexpected tag: %s" % t.tag)
 
@@ -133,18 +162,62 @@ def replace(**args):
 
     """
     if "async" not in args:
-        args["async"] = True
+        args["async"] = False
     if "photo" in args:
         args["photo_id"] = args.pop("photo").id
 
     photo_file = args.pop("photo_file")
 
-    r = post(REPLACE_URL, auth.AUTH_HANDLER, args, photo_file)
+    try:
+        resp_body = yield post(REPLACE_URL, auth.AUTH_HANDLER, args, photo_file)
+    except Exception as e:
+        raise e
 
-    t = r[0]
+    t = resp_body[0]
     if t.tag == 'photoid':
-        return Photo(id=t.text)
+        # sync mode, got a photo
+        raise Return(Photo(id=t.text,
+                           editurl='https://www.flickr.com/photos/upload/edit/?ids=' + t.text))
     elif t.tag == 'ticketid':
-        return UploadTicket(id=t.text, secret=t.secret)
+        # async mode, got a ticket
+        if not _futures:
+            _periodic_checks.start()
+
+        _futures[t.text] = Future()
+        try:
+            yield _futures[t.text]
+        except Exception as e:
+            raise e
+
+        raise Return(Photo(id=t.text,
+                           editurl='https://www.flickr.com/photos/upload/edit/?ids=' + t.text))
     else:
         raise FlickrError("Unexpected tag: %s" % t.tag)
+
+
+@coroutine
+def _check_tickets():
+    try:
+        tickets = yield Photo.checkUploadTickets(_futures.keys())
+    except Exception as e:
+        print e
+        raise e
+    for t in tickets:
+        f = _futures[t.id]
+        del _futures[t.id]
+        if not _futures:
+            _periodic_checks.stop()
+
+        if t.get("complete", 0) == 1:
+            # completed successfully
+            f.set_result()
+        elif t.get("complete", 0) == 2:
+            # ticket failed, problem converting photo?
+            f.set_exception(FlickrError("Ticket %s failed" % t.id))
+        elif t.get("invalid", 0) == 1:
+            # ticket not found
+            f.set_exception(FlickrError("Ticket %s not found" % t.id))
+
+
+CHECK_PERIOD = 2*1000   # how often check if tickets are ready
+_periodic_checks = PeriodicCallback(_check_tickets, CHECK_PERIOD)

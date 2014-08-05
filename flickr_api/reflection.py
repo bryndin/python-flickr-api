@@ -277,13 +277,13 @@ def static_caller(flickr_method, static=False):
     """
         This decorator binds a static method to the flickr method given
         by 'flickr_method'.
-        The wrapped method should return the argument dictionnary
+        The wrapped method should return the argument dictionary
         and a function that format the result of method_call.call_api.
 
         Some method can propagate authentication tokens. For instance a
         Person object can propagate its token to photos retrieved from
         it. In this case, it should return its token also and the
-        result formating function should take an additional argument
+        result formatting function should take an additional argument
         token.
     """
     def decorator(method):

@@ -15,13 +15,24 @@ import httplib
 import mimetypes
 import urlparse
 
+from tornado.gen import coroutine, Return
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
+@coroutine
 def posturl(url, fields, files):
     urlparts = urlparse.urlsplit(url)
-    return post_multipart(urlparts[1], urlparts[2], fields, files)
+    # return post_multipart(urlparts[1], urlparts[2], fields, files)
+    try:
+        response = yield post_multipart(url, fields, files)
+    except Exception as e:
+        print e
+        raise e
+    raise Return(response)
 
 
-def post_multipart(host, selector, fields, files):
+@coroutine
+# def post_multipart(host, selector, fields, files):
+def post_multipart(url, fields, files):
     """
     Post fields and files to an http host as multipart/form-data.
     fields is a sequence of (name, value) elements for regular form fields.
@@ -31,14 +42,26 @@ def post_multipart(host, selector, fields, files):
     Return the server's response page.
     """
     content_type, body = encode_multipart_formdata(fields, files)
-    h = httplib.HTTPSConnection(host)
+
+    # h = httplib.HTTPSConnection(host)
     headers = {"Content-Type": content_type, 'content-length': str(len(body))}
-    h.request("POST", selector, headers=headers)
-    h.send(body)
-    r = h.getresponse()
-    data = r.read()
-    h.close()
-    return r, data
+
+    http_client = AsyncHTTPClient()
+    request = HTTPRequest(url, "POST", headers=headers, body=body, validate_cert=False)
+    try:
+        response = yield http_client.fetch(request)
+    except Exception as e:
+        print e
+    else:
+        print response
+
+    # h.request("POST", selector, headers=headers)
+    # h.send(body)
+    # r = h.getresponse()
+    # data = r.read()
+    # h.close()
+    # return r, data
+    raise Return(response)
 
 
 def encode_multipart_formdata(fields, files):

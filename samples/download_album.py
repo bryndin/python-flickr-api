@@ -1,16 +1,18 @@
-import flickr_api as f
 import sys
 import os
+
+import flickr_api
+
 
 try:
     username = sys.argv[1]
     photoset_idx = int(sys.argv[2])
     try:
         access_token = sys.argv[3]
-        f.set_auth_handler(access_token)
+        flickr_api.set_auth_handler(access_token)
     except IndexError:
         pass
-    u = f.Person.findByUserName(username)
+    u = flickr_api.Person.findByUserName(username)
     ps = u.getPhotosets()[photoset_idx]
 
     if not os.path.exists(ps.title):
