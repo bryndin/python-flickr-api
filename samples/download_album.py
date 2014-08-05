@@ -1,7 +1,7 @@
 import sys
 import os
 
-import tornado_flickr_api
+import tornado_flickrapi
 
 
 try:
@@ -9,10 +9,10 @@ try:
     photoset_idx = int(sys.argv[2])
     try:
         access_token = sys.argv[3]
-        tornado_flickr_api.set_auth_handler(access_token)
+        tornado_flickrapi.set_auth_handler(access_token)
     except IndexError:
         pass
-    u = tornado_flickr_api.Person.findByUserName(username)
+    u = tornado_flickrapi.Person.findByUserName(username)
     ps = u.getPhotosets()[photoset_idx]
 
     if not os.path.exists(ps.title):
