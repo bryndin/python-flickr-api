@@ -51,7 +51,7 @@ def post_multipart(url, fields, files):
     try:
         response = yield http_client.fetch(request)
     except Exception as e:
-        print e
+        raise e
     else:
         print response
 
