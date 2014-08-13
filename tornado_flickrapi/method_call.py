@@ -49,6 +49,14 @@ def send_request(url, data=None):
     """Send an async http request.
     """
     http_client = AsyncHTTPClient()
+
+    # use libcurl if it's available
+    try:
+        import pycurl
+        AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
+    except Exception:
+        pass
+
     request = HTTPRequest(url, method="POST", body=data) if data else HTTPRequest(url)
     try:
         response = yield http_client.fetch(request)

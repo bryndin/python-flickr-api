@@ -42,6 +42,14 @@ def post_multipart(url, fields, files):
     headers = {"Content-Type": content_type, 'content-length': str(len(body))}
 
     http_client = AsyncHTTPClient()
+
+    # use libcurl if it's available
+    try:
+        import pycurl
+        AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
+    except Exception:
+        pass
+
     request = HTTPRequest(url, "POST", headers=headers, body=body, validate_cert=False)
     try:
         response = yield http_client.fetch(request)
