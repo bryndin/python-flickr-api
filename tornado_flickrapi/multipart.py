@@ -16,6 +16,8 @@ import mimetypes
 from tornado.gen import coroutine, Return
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
+from tornado_flickrapi import config
+
 
 @coroutine
 def posturl(url, fields, files):
@@ -41,7 +43,7 @@ def post_multipart(url, fields, files):
 
     headers = {"Content-Type": content_type, 'content-length': str(len(body))}
 
-    http_client = AsyncHTTPClient()
+    http_client = AsyncHTTPClient(io_loop=config["io_loop"])
 
     # use libcurl if it's available
     try:

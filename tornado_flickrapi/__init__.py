@@ -21,6 +21,11 @@
 
 """
 
+from tornado.ioloop import IOLoop
+
+config = {"io_loop": IOLoop.current()}
+
+
 try:
     from objects import *
     import objects

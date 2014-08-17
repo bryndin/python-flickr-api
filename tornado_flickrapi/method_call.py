@@ -19,6 +19,7 @@ from tornado.gen import coroutine, Return
 from . import keys
 from .flickrerrors import FlickrError, FlickrAPIError
 from .cache import SimpleCache
+from tornado_flickrapi import config
 
 REST_URL = "https://api.flickr.com/services/rest/"
 
@@ -48,7 +49,7 @@ def disable_cache():
 def send_request(url, data=None):
     """Send an async http request.
     """
-    http_client = AsyncHTTPClient()
+    http_client = AsyncHTTPClient(io_loop=config["io_loop"])
 
     # use libcurl if it's available
     try:
