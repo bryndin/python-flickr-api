@@ -19,10 +19,13 @@
     email: alexis.mignon_at_gmail.com
     Date: 05/08/2011
 """
-import method_call
-from  flickrerrors import FlickrError
-from reflection import caller, static_caller, FlickrAutoDoc
 import urllib2
+
+from tornado.gen import coroutine, Return
+
+import method_call
+from flickrerrors import FlickrError
+from reflection import caller, static_caller, FlickrAutoDoc
 from UserList import UserList
 import auth
 
@@ -1580,6 +1583,16 @@ class Photoset(FlickrObject):
                                     perpage=ps["perpage"],
                                     total=ps["total"]))
         return _format_extras(args), format_result
+
+    @coroutine
+    def getAllPhotos(self, **args):
+        """Return list of all photos"""
+        all_photos = yield self.getPhotos(**args)
+        for page in xrange(2, all_photos.info.pages + 1):
+            args["page"] = page
+            photos = yield self.getPhotos(**args)
+            all_photos.extend(photos)
+        raise Return(all_photos)
 
     @caller("flickr.stats.getPhotosetStats")
     def getStats(self, date, **args):
