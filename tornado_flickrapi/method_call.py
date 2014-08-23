@@ -15,7 +15,8 @@ import json
 import logging
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
-from tornado.gen import coroutine, Return
+from tornado.gen import Task, coroutine, Return
+from tornado.ioloop import IOLoop
 
 from . import keys
 from .flickrerrors import FlickrError, FlickrAPIError
@@ -49,9 +50,10 @@ def disable_cache():
 
 
 @coroutine
-def send_request(url, data=None):
+def send_request(url, data=None, starting_timeout=0.5, max_timeout=0):
     """Sends an async http request."""
-    http_client = AsyncHTTPClient(io_loop=config["io_loop"])
+    io_loop = config["io_loop"]
+    http_client = AsyncHTTPClient(io_loop)
 
     # use libcurl if it's available
     try:
@@ -61,14 +63,25 @@ def send_request(url, data=None):
         pass
 
     request = HTTPRequest(url, method="POST", body=data) if data else HTTPRequest(url)
-    try:
-        response = yield http_client.fetch(request)
-    except HTTPError as e:
-        log.debug("Exception: %s\n" % e +
-                  "request: %s\n" % request +
-                  "response: %s\n" % e.response,
-                  exc_info=True)
-        raise e
+
+    timeout = starting_timeout
+    while True:
+        try:
+            response = yield http_client.fetch(request)
+            break
+        except HTTPError as e:
+            log.debug("Retrying HTTP exception: %s\n" % e +
+                      "request: %s\n" % request,
+                      exc_info=True)
+            yield Task(io_loop.call_later, timeout)
+            timeout *= 2
+            if timeout > max_timeout:
+                raise e
+        except Exception as e:
+            log.debug("Exception: %s\n" % e +
+                      "request: %s\n" % request,
+                      exc_info=True)
+            raise e
 
     raise Return(response)
 
