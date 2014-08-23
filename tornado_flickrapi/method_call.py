@@ -72,6 +72,7 @@ def send_request(url, data=None, starting_timeout=0.5, max_timeout=0):
         except HTTPError as e:
             log.debug("Retrying HTTP exception: %s\n" % e +
                       "request: %s\n" % request,
+                      "timeout: %f" % timeout,
                       exc_info=True)
             yield Task(io_loop.call_later, timeout)
             timeout *= 2
