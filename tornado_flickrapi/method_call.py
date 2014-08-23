@@ -12,6 +12,7 @@ import urllib2
 import urllib
 import hashlib
 import json
+import logging
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from tornado.gen import coroutine, Return
@@ -24,6 +25,8 @@ from tornado_flickrapi import config
 REST_URL = "https://api.flickr.com/services/rest/"
 
 CACHE = None
+
+log = logging.getLogger("tornado.application")
 
 
 def enable_cache(cache_object=None):
@@ -47,8 +50,7 @@ def disable_cache():
 
 @coroutine
 def send_request(url, data=None):
-    """Send an async http request.
-    """
+    """Sends an async http request."""
     http_client = AsyncHTTPClient(io_loop=config["io_loop"])
 
     # use libcurl if it's available
@@ -62,7 +64,12 @@ def send_request(url, data=None):
     try:
         response = yield http_client.fetch(request)
     except HTTPError as e:
-        raise FlickrError(e.response)
+        log.debug("Exception: %s\n" % e +
+              "request: %s\n" % request +
+              "response: %s\n" % e.response,
+              exc_info=True)
+        raise e
+
     raise Return(response)
 
 
