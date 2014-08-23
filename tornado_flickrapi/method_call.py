@@ -152,14 +152,14 @@ def call_api(api_key=None, api_secret=None, auth_handler=None,
 
     if CACHE is None:
         try:
-            resp = yield send_request(request_url, data, timeout_kwargs)
+            resp = yield send_request(request_url, data, **timeout_kwargs)
         except Exception as e:
             raise e
     else:
         resp = CACHE.get(data)
         if resp is None:
             try:
-                resp = yield send_request(request_url, data, timeout_kwargs)
+                resp = yield send_request(request_url, data, **timeout_kwargs)
             except Exception as e:
                 raise e
         if data not in CACHE:
