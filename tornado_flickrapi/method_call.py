@@ -65,9 +65,9 @@ def send_request(url, data=None):
         response = yield http_client.fetch(request)
     except HTTPError as e:
         log.debug("Exception: %s\n" % e +
-              "request: %s\n" % request +
-              "response: %s\n" % e.response,
-              exc_info=True)
+                  "request: %s\n" % request +
+                  "response: %s\n" % e.response,
+                  exc_info=True)
         raise e
 
     raise Return(response)
