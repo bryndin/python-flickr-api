@@ -1586,7 +1586,7 @@ class Photoset(FlickrObject):
 
     @coroutine
     def getAllPhotos(self, **args):
-        """Return list of all photos"""
+        """Returns list of all photos."""
         all_photos = yield self.getPhotos(**args)
         for page in xrange(2, all_photos.info.pages + 1):
             args["page"] = page
