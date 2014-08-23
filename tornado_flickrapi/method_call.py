@@ -88,7 +88,7 @@ def send_request(url, data=None, starting_timeout=0.5, max_timeout=0):
 
 @coroutine
 def call_api(api_key=None, api_secret=None, auth_handler=None,
-             needssigning=False, request_url=REST_URL, raw=False, **args):
+             needssigning=False, request_url=REST_URL, raw=False, **kwargs):
     """
         Performs the calls to the Flickr REST interface.
 
@@ -108,9 +108,9 @@ def call_api(api_key=None, api_secret=None, auth_handler=None,
             is used.
         raw:
             if True the default xml response from the server is returned. If
-            False (default) a dictionnary built from the JSON answer is
+            False (default) a dictionary built from the JSON answer is
             returned.
-        args:
+        kwargs:
             the arguments to pass to the method.
     """
 
@@ -128,35 +128,38 @@ def call_api(api_key=None, api_secret=None, auth_handler=None,
     if not api_key or not api_secret:
         raise FlickrError("The Flickr API keys have not been set")
 
-    clean_args(args)
-    args["api_key"] = api_key
+    clean_args(kwargs)
+    kwargs["api_key"] = api_key
     if not raw:
-        args["format"] = 'json'
-        args["nojsoncallback"] = 1
+        kwargs["format"] = 'json'
+        kwargs["nojsoncallback"] = 1
 
     if auth_handler is None:
         if needssigning:
-            query_elements = args.items()
+            query_elements = kwargs.items()
             query_elements.sort()
             sig = keys.API_SECRET + ["".join(["".join(e) for e in query_elements])]
             m = hashlib.md5()
             m.update(sig)
             api_sig = m.digest()
-            args["api_sig"] = api_sig
-        data = urllib.urlencode(args)
+            kwargs["api_sig"] = api_sig
+        data = urllib.urlencode(kwargs)
     else:
-        data = auth_handler.complete_parameters(url=request_url, params=args).to_postdata()
+        data = auth_handler.complete_parameters(url=request_url, params=kwargs).to_postdata()
+
+    timeout_kwargs = dict((k, kwargs[k]) for k in kwargs
+                          if k in ("starting_timeout", "max_timeout"))
 
     if CACHE is None:
         try:
-            resp = yield send_request(request_url, data)
+            resp = yield send_request(request_url, data, timeout_kwargs)
         except Exception as e:
             raise e
     else:
         resp = CACHE.get(data)
         if resp is None:
             try:
-                resp = yield send_request(request_url, data)
+                resp = yield send_request(request_url, data, timeout_kwargs)
             except Exception as e:
                 raise e
         if data not in CACHE:
