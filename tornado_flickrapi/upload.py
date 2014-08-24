@@ -5,16 +5,21 @@
 
     Two functions are provided:
 
-    - upload
+    - upload (supporting both sync and async modes)
     - replace (presently not working)
+
+    Author: Dmitriy Bryndin
+    email: bryndin@gmail.com
+    Date:  08/24/2014
 
     Author: Alexis Mignon (c)
     email: alexis.mignon@gmail.com
     Date:  06/08/2011
-
 """
 
 import os
+import logging
+
 from xml.etree import ElementTree
 
 from tornado.gen import coroutine, Return
@@ -31,6 +36,7 @@ UPLOAD_URL = "https://api.flickr.com/services/upload/"
 REPLACE_URL = "https://api.flickr.com/services/replace/"
 
 _futures = {}
+log = logging.getLogger("tornado.application")
 
 
 def format_dict(d):
@@ -112,6 +118,7 @@ def upload(**args):
     try:
         resp_body = yield post(UPLOAD_URL, auth.AUTH_HANDLER, args, photo_file)
     except Exception as e:
+        log.error("Failed to upload %s" % photo_file)
         raise e
 
     t = resp_body[0]
