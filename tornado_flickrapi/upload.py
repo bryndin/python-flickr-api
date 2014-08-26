@@ -54,11 +54,11 @@ def format_dict(d):
 
 
 @coroutine
-def post(url, auth_handler, args, photo_file):
-    args = format_dict(args)
-    args["api_key"] = auth_handler.key
+def post(url, auth_handler, photo_file, **kwargs):
+    kwargs = format_dict(kwargs)
+    kwargs["api_key"] = auth_handler.key
 
-    params = auth_handler.complete_parameters(url, args).parameters
+    params = auth_handler.complete_parameters(url, kwargs).parameters
 
     fields = params.items()
 
@@ -80,7 +80,7 @@ def post(url, auth_handler, args, photo_file):
 
 
 @coroutine
-def upload(**args):
+def upload(**kwargs):
     """
     Authentication:
 
@@ -108,15 +108,15 @@ def upload(**args):
             set to 1 for async mode, 0 for sync mode
 
     """
-    if "async" not in args:
-        args["async"] = False
+    if "async" not in kwargs:
+        kwargs["async"] = False
 
     if auth.AUTH_HANDLER is None:
         raise FlickrError("Not authenticated")
 
-    photo_file = args.pop("photo_file")
+    photo_file = kwargs.pop("photo_file")
     try:
-        resp_body = yield post(UPLOAD_URL, auth.AUTH_HANDLER, args, photo_file)
+        resp_body = yield post(UPLOAD_URL, auth.AUTH_HANDLER, photo_file, **kwargs)
     except Exception as e:
         log.error("Failed to upload %s" % photo_file)
         raise e
@@ -143,7 +143,7 @@ def upload(**args):
         raise FlickrError("Unexpected tag: %s" % t.tag)
 
 
-def replace(**args):
+def replace(**kwargs):
     """
      Authentication:
 
@@ -168,15 +168,15 @@ def replace(**args):
             for details.
 
     """
-    if "async" not in args:
-        args["async"] = False
-    if "photo" in args:
-        args["photo_id"] = args.pop("photo").id
+    if "async" not in kwargs:
+        kwargs["async"] = False
+    if "photo" in kwargs:
+        kwargs["photo_id"] = kwargs.pop("photo").id
 
-    photo_file = args.pop("photo_file")
+    photo_file = kwargs.pop("photo_file")
 
     try:
-        resp_body = yield post(REPLACE_URL, auth.AUTH_HANDLER, args, photo_file)
+        resp_body = yield post(REPLACE_URL, auth.AUTH_HANDLER, photo_file, **kwargs)
     except Exception as e:
         raise e
 

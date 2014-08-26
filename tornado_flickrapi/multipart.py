@@ -14,9 +14,9 @@
 import mimetypes
 
 from tornado.gen import coroutine, Return
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.httpclient import HTTPRequest
 
-from tornado_flickrapi import config
+from tornado_flickrapi.httpclient import fetch
 
 
 @coroutine
@@ -24,7 +24,6 @@ def posturl(url, fields, files):
     try:
         response = yield post_multipart(url, fields, files)
     except Exception as e:
-        print e
         raise e
     raise Return(response)
 
@@ -40,21 +39,11 @@ def post_multipart(url, fields, files):
     Return the server's response page.
     """
     content_type, body = encode_multipart_formdata(fields, files)
-
     headers = {"Content-Type": content_type, 'content-length': str(len(body))}
-
-    http_client = AsyncHTTPClient(io_loop=config["io_loop"])
-
-    # use libcurl if it's available
-    try:
-        import pycurl
-        AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
-    except Exception:
-        pass
-
     request = HTTPRequest(url, "POST", headers=headers, body=body, validate_cert=False)
+
     try:
-        response = yield http_client.fetch(request)
+        response = yield fetch(request)
     except Exception as e:
         raise e
 
