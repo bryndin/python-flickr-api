@@ -248,12 +248,12 @@ def caller(flickr_method, static=False):
         @wraps(method)
         def call(self, *args, **kwargs):
             token, kwargs = _get_token(self, **kwargs)
-            method_args, format_result = method(self, *args, **kwargs)
-            method_args[call.__self_name__] = self.id
+            method_kwargs, format_result = method(self, *args, **kwargs)
+            method_kwargs[call.__self_name__] = self.id
             if token:
-                method_args["auth_handler"] = token
+                method_kwargs["auth_handler"] = token
             try:
-                r = yield method_call.call_api(method=flickr_method, **method_args)
+                r = yield method_call.call_api(method=flickr_method, **method_kwargs)
             except Exception as e:
                 raise e
             try:
