@@ -31,8 +31,8 @@ def fetch(request):
             break
         except HTTPError as e:
             log.debug("Retrying HTTP exception: %s\n" % e +
-                      "request headers: %s\n" % request.headers[:128] +
-                      "request body: %s\n" % request.body[:128] +
+                      "request headers: %s\n" % str(request.headers)[:128] +
+                      "request body: %s\n" % str(request.body)[:128] +
                       "timeout: %.1f sec" % timeout,
                       exc_info=True)
             yield Task(io_loop.call_later, timeout)
@@ -41,8 +41,8 @@ def fetch(request):
                 raise e
         except Exception as e:
             log.debug("Exception: %s\n" % e +
-                      "request headers: %s\n" % request.headers[:128] +
-                      "request body: %s\n" % request.body[:128],
+                      "request headers: %s\n" % str(request.headers)[:128] +
+                      "request body: %s\n" % str(request.body)[:128],
                       exc_info=True)
             raise e
 
